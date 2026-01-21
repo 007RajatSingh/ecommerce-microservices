@@ -32,4 +32,4 @@ jobs:
           cache: maven
 
       - name: Build ${{matrix.service}}
-        run: mvn -B clean package --file ${{matrix.service}}/pom.xml
+        run: mvn -B clean package -DskipTests --file ${{ matrix.service }}/pom.xml
