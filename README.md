@@ -1,3 +1,4 @@
+[![Microservices CI Pipeline](https://github.com/007RajatSingh/ecommerce-microservices/actions/workflows/backend-cicd.yml/badge.svg)](https://github.com/007RajatSingh/ecommerce-microservices/actions/workflows/backend-cicd.yml)
 # 🛒 E-Commerce Microservices Backend
 
 A robust, scalable e-commerce backend built with **Spring Boot Microservices**.
