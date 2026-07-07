@@ -3,6 +3,7 @@ package com.Rajat.notification_service;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.kafka.annotation.KafkaListener;
+import com.Rajat.common.event.OrderPlacedEvent;
 
 import lombok.extern.slf4j.Slf4j;
 

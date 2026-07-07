@@ -1,4 +1,4 @@
-package com.Rajat.notification_service;
+package com.Rajat.common.event;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class OrderPlacedEvent {
+public class InventoryRejectedEvent {
     private String orderNumber;
+    private String reason;
 }

@@ -6,10 +6,16 @@ import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFac
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import io.jsonwebtoken.Claims;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Component
 public class AuthenticationFilterGatewayFilterFactory
         extends AbstractGatewayFilterFactory<AuthenticationFilterGatewayFilterFactory.Config> {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthenticationFilterGatewayFilterFactory.class);
 
     @Autowired
     private RouteValidator validator;
@@ -37,9 +43,20 @@ public class AuthenticationFilterGatewayFilterFactory
                 }
 
                 try {
-                    jwtUtil.validateToken(authHeader);
+                    Claims claims = jwtUtil.validateTokenAndGetClaims(authHeader);
+                    String username = claims.getSubject();
+                    
+                    log.info("Request authenticated for user: {}", username);
+                    
+                    // Mutate request to add X-Auth-User-Id header
+                    ServerHttpRequest request = exchange.getRequest().mutate()
+                            .header("X-Auth-User-Id", username)
+                            .build();
+                            
+                    return chain.filter(exchange.mutate().request(request).build());
+
                 } catch (Exception e) {
-                    System.out.println("invalid access...!" + e.getMessage());
+                    log.error("Invalid access token: {}", e.getMessage());
 
                     exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
                     return exchange.getResponse().setComplete();

@@ -4,15 +4,21 @@ services:
     image: postgres:15-alpine
     container_name: ecommerce-postgres
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
       POSTGRES_DB: ecommerce_db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     networks:
       - ecommerce-net
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   # 2. Cache (Redis)
   redis:
@@ -65,91 +71,199 @@ services:
     container_name: discovery-service
     ports:
       - "8761:8761"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
     networks:
       - ecommerce-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health/readiness"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
   api-gateway:
     build: ./api-gateway
     container_name: api-gateway
     ports:
       - "8080:8080"
     depends_on:
-      - discovery-service
-      - zipkin
+      discovery-service:
+        condition: service_started
+      zipkin:
+        condition: service_started
     environment:
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
-      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
-      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
-      SPRING_ZIPKIN_BASE_URL: http://zipkin:9411
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SERVER_PORT: ${SERVER_PORT:-8080}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:-http://discovery-service:8761/eureka/}
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: ${MANAGEMENT_TRACING_SAMPLING_PROBABILITY:-1.0}
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: ${MANAGEMENT_ZIPKIN_TRACING_ENDPOINT:-http://zipkin:9411/api/v2/spans}
     networks:
       - ecommerce-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health/readiness"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   auth-service:
     build: ./auth-service
     container_name: auth-service
+    ports:
+      - "9090:9090"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ecommerce_db
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SERVER_PORT: 9090
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://postgres:5432/ecommerce_db}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-admin}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-password}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:-http://discovery-service:8761/eureka/}
     depends_on:
-      - postgres
-      - discovery-service
+      postgres:
+        condition: service_started
+      discovery-service:
+        condition: service_started
     networks:
       - ecommerce-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/actuator/health/readiness"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
   product-service:
     build: ./product-service
     container_name: product-service
+    ports:
+      - "8081:8081"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ecommerce_db
-      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
-      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans # <--- VERIFY THIS
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_ZIPKIN_BASE_URL: http://zipkin:9411
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SERVER_PORT: 8081
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://postgres:5432/ecommerce_db}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-admin}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-password}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
+      SPRING_DATA_REDIS_HOST: ${SPRING_DATA_REDIS_HOST:-redis}
+      SPRING_DATA_REDIS_PORT: ${SPRING_DATA_REDIS_PORT:-6379}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:-http://discovery-service:8761/eureka/}
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: ${MANAGEMENT_TRACING_SAMPLING_PROBABILITY:-1.0}
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: ${MANAGEMENT_ZIPKIN_TRACING_ENDPOINT:-http://zipkin:9411/api/v2/spans}
     depends_on:
-      - postgres
-      - redis
-      - discovery-service
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      discovery-service:
+        condition: service_started
     networks:
       - ecommerce-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health/readiness"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
   order-service:
     build: ./order-service
     container_name: order-service
+    ports:
+      - "8083:8083"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ecommerce_db
-      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
-      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      SPRING_ZIPKIN_BASE_URL: http://zipkin:9411
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SERVER_PORT: 8083
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://postgres:5432/ecommerce_db}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-admin}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-password}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:-http://discovery-service:8761/eureka/}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:-kafka:29092}
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: ${MANAGEMENT_TRACING_SAMPLING_PROBABILITY:-1.0}
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: ${MANAGEMENT_ZIPKIN_TRACING_ENDPOINT:-http://zipkin:9411/api/v2/spans}
     depends_on:
-      - postgres
-      - kafka
-      - discovery-service
+      postgres:
+        condition: service_started
+      kafka:
+        condition: service_started
+      discovery-service:
+        condition: service_started
     networks:
       - ecommerce-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health/readiness"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
   inventory-service:
     build: ./inventory-service
     container_name: inventory-service
+    ports:
+      - "8082:8082"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ecommerce_db
-      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: 1.0
-      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
-      SPRING_ZIPKIN_BASE_URL: http://zipkin:9411
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SERVER_PORT: 8082
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://postgres:5432/ecommerce_db}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-admin}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-password}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO:-update}
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:-http://discovery-service:8761/eureka/}
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: ${MANAGEMENT_TRACING_SAMPLING_PROBABILITY:-1.0}
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: ${MANAGEMENT_ZIPKIN_TRACING_ENDPOINT:-http://zipkin:9411/api/v2/spans}
     depends_on:
-      - postgres
-      - discovery-service
+      postgres:
+        condition: service_started
+      discovery-service:
+        condition: service_started
     networks:
       - ecommerce-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health/readiness"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
   notification-service:
     build: ./notification-service
     container_name: notification-service
+    ports:
+      - "8084:8084"
     environment:
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka/
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      SPRING_ZIPKIN_BASE_URL: http://zipkin:9411
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SERVER_PORT: 8084
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:-http://discovery-service:8761/eureka/}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:-kafka:29092}
+      MANAGEMENT_TRACING_SAMPLING_PROBABILITY: ${MANAGEMENT_TRACING_SAMPLING_PROBABILITY:-1.0}
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: ${MANAGEMENT_ZIPKIN_TRACING_ENDPOINT:-http://zipkin:9411/api/v2/spans}
     depends_on:
-      - kafka
-      - discovery-service
+      kafka:
+        condition: service_started
+      discovery-service:
+        condition: service_started
+    networks:
+      - ecommerce-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health/readiness"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  payment-service:
+    build: ./payment-service
+    container_name: payment-service
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
+      SERVER_PORT: 8085
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:-http://discovery-service:8761/eureka/}
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:-kafka:29092}
+    depends_on:
+      kafka:
+        condition: service_started
+      discovery-service:
+        condition: service_started
     networks:
       - ecommerce-net
 

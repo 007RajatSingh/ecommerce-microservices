@@ -32,3 +32,4 @@ It features **Event-Driven Architecture** (Kafka), **Edge Security** (JWT + API 
 Run the entire system with Docker Compose:
 ```bash
 docker-compose up -d --build
+```
