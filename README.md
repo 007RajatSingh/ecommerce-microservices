@@ -70,5 +70,5 @@ docker compose up -d --build
 ### Accessing Dashboards
 - **API Gateway:** `http://localhost:8080`
 - **Eureka Service Registry:** `http://localhost:8761`
-- **Grafana (Logs & Traces):** `http://localhost:3000` (Credentials: admin/admin)
+- **Grafana (Logs & Traces):** `http://localhost:3000` (Default Credentials: admin/admin)
 - **Zipkin (Raw Traces):** `http://localhost:9411`
