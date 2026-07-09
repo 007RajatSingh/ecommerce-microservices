@@ -1,20 +1,39 @@
+### Java ###
 target/
 *.jar
+*.war
+*.ear
 *.class
+*.log
+
+### Maven ###
+!.mvn/wrapper/maven-wrapper.jar
+logs/
+*.log
+
+### IDE ###
 .idea/
 .vscode/
 *.iml
+*.iws
+*.ipr
+.project
+.classpath
+.settings/
+.factorypath
+.springBeans
+.sts4-cache/
+.apt_generated/
+
+### OS ###
 .DS_Store
-help.md
+Thumbs.db
+
+### Env ###
 .env
 .env.example
 
-*.war
-*.ear
-*.zip
-*.tar
-*.tar.gz
-*.exe
-*.dll
-*.so
-*.dylib
+### Node (if applicable for frontend) ###
+node_modules/
+dist/
+build/
