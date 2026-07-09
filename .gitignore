@@ -8,3 +8,13 @@ target/
 help.md
 .env
 .env.example
+
+*.war
+*.ear
+*.zip
+*.tar
+*.tar.gz
+*.exe
+*.dll
+*.so
+*.dylib

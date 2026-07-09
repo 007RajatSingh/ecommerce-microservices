@@ -3,6 +3,7 @@ server:
 
 jwt:
   secret: ${JWT_SECRET:5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437}
+  admin-secret: ${JWT_ADMIN_SECRET:2D01B948F2627711BFB2519A48E2D9C3EBFD89FE6BC13CB1EC598F1CB3299049}
 
 spring:
   application:
@@ -17,17 +18,36 @@ spring:
             locator:
               enabled: true
           routes:
-            # 1. Product Service
-            - id: product-service
+            # 1. Product Service (Public)
+            - id: product-service-public
               uri: lb://product-service
               predicates:
                 - Path=/api/products/**
+                - Method=GET
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: productCircuitBreaker
+                    fallbackUri: forward:/fallback/product
+            
+            # 1b. Product Service (Admin Only)
+            - id: product-service-admin
+              uri: lb://product-service
+              predicates:
+                - Path=/api/products/**
+                - Method=POST,PUT,DELETE
+              filters:
+                - AdminAuthenticationFilter
+                - name: CircuitBreaker
+                  args:
+                    name: productCircuitBreaker
+                    fallbackUri: forward:/fallback/product
             
             # 2. Order Service
             - id: order-service
               uri: lb://order-service
               predicates:
-                - Path=/api/orders/**
+                - Path=/api/orders/**,/api/cart/**
               filters:
                 - AuthenticationFilter
                 - name: CircuitBreaker
@@ -41,7 +61,7 @@ spring:
               predicates:
                 - Path=/api/inventory/**
               filters:
-                - AuthenticationFilter
+                - AdminAuthenticationFilter
                 - name: CircuitBreaker
                   args:
                     name: inventoryCircuitBreaker
@@ -52,6 +72,22 @@ spring:
               uri: lb://auth-service
               predicates:
                 - Path=/auth/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: authCircuitBreaker
+                    fallbackUri: forward:/fallback/auth
+
+            # 5. Admin Auth Service
+            - id: admin-auth-service
+              uri: lb://admin-auth-service
+              predicates:
+                - Path=/admin/**
+              filters:
+                - name: CircuitBreaker
+                  args:
+                    name: adminAuthCircuitBreaker
+                    fallbackUri: forward:/fallback/adminAuth
 
 eureka:
   client:
@@ -68,6 +104,24 @@ resilience4j:
         waitDurationInOpenState: 5s    # Wait 5s before trying again
         failureRateThreshold: 50       # Open circuit if 50% fail
       inventoryCircuitBreaker:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        permittedNumberOfCallsInHalfOpenState: 3
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+      productCircuitBreaker:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        permittedNumberOfCallsInHalfOpenState: 3
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+      authCircuitBreaker:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        permittedNumberOfCallsInHalfOpenState: 3
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+      adminAuthCircuitBreaker:
         registerHealthIndicator: true
         slidingWindowSize: 10
         permittedNumberOfCallsInHalfOpenState: 3

@@ -23,6 +23,13 @@ public class ProductService {
                 .orElseThrow(() -> new RuntimeException("Product not found"));
     }
 
+    @Cacheable(value = "products_by_name")
+    public Product getProductByName(String name) {
+        System.out.println("Fetching from database for name: " + name);
+        return productRepository.findByName(name)
+                .orElseThrow(() -> new RuntimeException("Product not found"));
+    }
+
     public Product createProduct(Product product) {
         return productRepository.save(product);
     }

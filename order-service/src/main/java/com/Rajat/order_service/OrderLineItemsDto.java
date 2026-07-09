@@ -3,7 +3,7 @@ package com.Rajat.order_service;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.math.BigDecimal;
+// import java.math.BigDecimal;
 
 @Data
 @AllArgsConstructor
@@ -11,6 +11,5 @@ import java.math.BigDecimal;
 public class OrderLineItemsDto {
     private Long id;
     private String skuCode;
-    private BigDecimal price;
     private Integer quantity;
 }

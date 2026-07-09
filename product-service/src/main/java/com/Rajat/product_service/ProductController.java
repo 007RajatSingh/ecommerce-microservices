@@ -43,4 +43,10 @@ public class ProductController {
     public Product getProductById(@PathVariable Long id) {
         return productService.getProductById(id);
     }
+
+    @GetMapping("/sku/{skuCode}")
+    @ResponseStatus(HttpStatus.OK)
+    public Product getProductBySkuCode(@PathVariable String skuCode) {
+        return productService.getProductByName(skuCode);
+    }
 }

@@ -21,7 +21,7 @@ public class PaymentEventConsumer {
 
     @KafkaListener(topics = "paymentTopic", groupId = "paymentId")
     public void handlePaymentRequested(PaymentRequestedEvent event) {
-        log.info("Received PaymentRequestedEvent for order: {}", event.getOrderNumber());
+        log.info("Received PaymentRequestedEvent for order: {} with amount: {}", event.getOrderNumber(), event.getAmount());
         
         // Mock payment processing (10% chance to fail)
         boolean success = random.nextInt(10) != 0;

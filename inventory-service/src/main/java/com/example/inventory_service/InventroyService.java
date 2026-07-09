@@ -15,6 +15,8 @@ public class InventroyService {
 
     @Transactional(readOnly = true)
     public boolean isInStock(String skuCode, Integer quantity) {
+        if (quantity == null || quantity <= 0) return false;
+        
         return inventoryRepository.findBySkuCode(skuCode)
                 .map(inventory -> inventory.getQuantity() >= quantity)
                 .orElse(false); // count as out of stock
@@ -24,6 +26,9 @@ public class InventroyService {
     public boolean reserveStock(List<OrderItemDto> items) {
         // check all first
         for (OrderItemDto item : items) {
+            if (item.getQuantity() == null || item.getQuantity() <= 0) {
+                return false; // invalid quantity
+            }
             Optional<Inventory> opt = inventoryRepository.findBySkuCode(item.getSkuCode());
             if (opt.isEmpty() || opt.get().getQuantity() < item.getQuantity()) {
                 return false; // not enough stock

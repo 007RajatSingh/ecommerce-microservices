@@ -16,4 +16,13 @@ public class OrderController {
     public String placeOrder(@RequestBody OrderRequest orderRequest) {
         return orderService.placeOrder(orderRequest);
     }
+
+    @PostMapping("/checkout")
+    @ResponseStatus(HttpStatus.CREATED)
+    public String checkoutCart(@RequestHeader(value = "X-Auth-User-Id", required = false) String userId) {
+        if (userId == null || userId.trim().isEmpty()) {
+            throw new RuntimeException("User must be authenticated");
+        }
+        return orderService.checkoutCart(userId);
+    }
 }
